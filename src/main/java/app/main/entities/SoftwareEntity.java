@@ -16,7 +16,7 @@ public class SoftwareEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	@Column
+	@Column(nullable = false)
 	private String title;
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "software")
 	private List<BugEntity> bugs;
