@@ -1,17 +1,13 @@
 package app.main.controllers;
 
-import app.main.dto.PatchBugDto;
+import app.main.dto.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import app.main.dto.CreateBugDto;
-import app.main.dto.CreateSoftwareDto;
 import app.main.entities.BugEntity;
 import app.main.entities.SoftwareEntity;
 import app.main.enums.Severity;
@@ -19,6 +15,7 @@ import app.main.repositories.BugRepository;
 import app.main.repositories.SoftwareRepository;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 public class BugTrackerController {
@@ -28,8 +25,8 @@ public class BugTrackerController {
 	@Autowired
 	private BugRepository bugRepository;
 	
-	@PostMapping(path = "/software", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SoftwareEntity> createSoftware(
+	@PostMapping(path = "/softwares")
+	public ResponseEntity<SoftwareResponseDto> createSoftware(
 				@RequestBody(required = true) @NotNull CreateSoftwareDto softwareDto
 			) {
 		if(!softwareDto.isValid())
@@ -37,11 +34,12 @@ public class BugTrackerController {
 		
 		SoftwareEntity software = new SoftwareEntity(softwareDto.getTitle());
 		SoftwareEntity created = softwareRepository.save(software);
-		return new ResponseEntity<SoftwareEntity>(created, null, HttpStatus.CREATED);
+		SoftwareResponseDto response = new SoftwareResponseDto(created);
+		return new ResponseEntity(response, HttpStatus.CREATED);
 	}
-	
-	@PostMapping(path = "/software/{softwareId}/bug", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<BugEntity> createBug(
+
+	@PostMapping(path = "/softwares/{softwareId}/bugs")
+	public ResponseEntity<BugResponseDto> createBug(
 				@RequestBody(required = true) @NotNull CreateBugDto createBugDto,
 				@PathVariable(name = "softwareId", required = true) @NotNull String softwareId
 			) {
@@ -53,8 +51,7 @@ public class BugTrackerController {
 		BugEntity bug = new BugEntity(
 				createBugDto.getDescription(),
 				createBugDto.getDeadline(),
-				bugSeverity,
-				createBugDto.getImageUrl()
+				bugSeverity
 			);
 		
 		SoftwareEntity software = softwareRepository.findById(Long.parseLong(softwareId)).get();
@@ -65,60 +62,63 @@ public class BugTrackerController {
 		bug.setSoftware(software);
 		
 		BugEntity created = bugRepository.save(bug);
-		return new ResponseEntity<BugEntity>(created, null, HttpStatus.CREATED);
+		BugResponseDto response = new BugResponseDto(created);
+		return new ResponseEntity(response, HttpStatus.CREATED);
 	}
 
-	@GetMapping(path = "/software", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<SoftwareEntity[]> readSoftware() {
-		return null;
-	}
-
-	@GetMapping(path = "/bug/{bugId}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<BugEntity>> readBug(
-			@PathVariable(name = "bugId", required = false) @Nullable Long bugId
+	@GetMapping(path = "/bugs/{bugId}")
+	public ResponseEntity<BugResponseDto> readBugById(
+			@PathVariable(name = "bugId", required = false) @NotNull Long bugId
 	) {
-		System.out.println(bugId);
-
-		if(bugId == null) {
-			List<BugEntity> bugs = this.bugRepository.findAll();
-			return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
-		}
-
+		if(bugId == null)
+			return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
 		List<BugEntity> bugs = this.bugRepository.findAllById(bugId);
-		return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
-
+		List<BugResponseDto> response = bugs.stream().map(bug -> new BugResponseDto(bug)).collect(Collectors.toList());
+		if(response.get(0) == null)
+			return new ResponseEntity(null, HttpStatus.NOT_FOUND);
+		return new ResponseEntity(response.get(0), HttpStatus.FOUND);
 	}
 
-	@GetMapping(path = "/bug/software/{idSoftware}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<List<BugEntity>> readBug(
-			@RequestBody(required = false) @Nullable PatchBugDto patchBugDto,
+	@GetMapping(path = "/bugs")
+	public ResponseEntity<List<BugResponseDto>> readBug() {
+		List<BugEntity> bugs = this.bugRepository.findAll();
+		List<BugResponseDto> response = bugs.stream().map(bug -> new BugResponseDto(bug)).collect(Collectors.toList());
+		return new ResponseEntity(response, HttpStatus.OK);
+	}
+
+	@GetMapping(path = "/softwares/{idSoftware}/bugs")
+	public ResponseEntity<List<BugResponseDto>> readBug(
+			@RequestBody(required = false) @Nullable ReadBugDto readBugDto,
 			@PathVariable(name = "idSoftware", required = true) @NotNull Long idSoftware
 	) {
 		if(idSoftware == null)
 			return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
 
-		if(patchBugDto.isValid()){
-			List<BugEntity> bugs = this.bugRepository.findByIdSoftwareWhereSeverity(idSoftware, patchBugDto.getSeverity());
-			return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
+		if(readBugDto != null && readBugDto.isValid()){
+			List<BugEntity> bugs = this.bugRepository.findByIdSoftwareWhereSeverity(idSoftware, readBugDto.getSeverity());
+			List<BugResponseDto> response = bugs.stream().map(bug -> new BugResponseDto(bug)).collect(Collectors.toList());
+			return new ResponseEntity(response, HttpStatus.FOUND);
 		}
 
 		List<BugEntity> bugs = this.bugRepository.findBySoftwareId(idSoftware);
-		return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
+		List<BugResponseDto> response = bugs.stream().map(bug -> new BugResponseDto(bug)).collect(Collectors.toList());
+		return new ResponseEntity(response, HttpStatus.OK);
 	}
 
-	@PatchMapping(path = "/bug/{bugId}/severity", produces = MediaType.APPLICATION_JSON_VALUE)
+	@PatchMapping(path = "/bugs/{bugId}/severity")
 	public ResponseEntity<BugEntity> updateBug(
-				@RequestBody(required = true) @NotNull PatchBugDto patchBugDto,
+				@RequestBody(required = true) @NotNull UpdateBugDto updateBugDto,
 				@PathVariable(name = "bugId", required = true) @NotNull String bugId
 			) {
-		if(bugId.isEmpty() || !patchBugDto.isValid())
+		if(bugId.isEmpty() || !updateBugDto.isValid())
 			return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
 		BugEntity bug = this.bugRepository.findById(Long.parseLong(bugId)).get();
 		if(bug == null)
 			return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
-		Severity bugSeverity = Severity.valueOf(patchBugDto.getSeverity()).get();
+		Severity bugSeverity = Severity.valueOf(updateBugDto.getSeverity()).get();
 		bug.setSeverity(bugSeverity);
 		this.bugRepository.save(bug);
-		return new ResponseEntity<BugEntity>(bug, null, HttpStatus.OK);
+		BugResponseDto response = new BugResponseDto(bug);
+		return new ResponseEntity(response, HttpStatus.OK);
 	}
 }

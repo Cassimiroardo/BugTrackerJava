@@ -1,9 +1,9 @@
 package app.main.dto;
 
-public class PatchBugDto {
+public class ReadBugDto {
     private int severity;
-    public PatchBugDto() {}
-    public PatchBugDto(int severity) {
+    public ReadBugDto() {}
+    public ReadBugDto(int severity) {
         this.severity = severity;
     }
     public boolean isValid() {

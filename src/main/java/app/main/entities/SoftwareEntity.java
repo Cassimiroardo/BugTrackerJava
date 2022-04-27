@@ -23,13 +23,20 @@ public class SoftwareEntity {
 
 	public SoftwareEntity() {
 	}
-
 	public SoftwareEntity(String title) {
 		this.title = title;
 	}
-
 	public SoftwareEntity(Long id, String title) {
 		this.id = id;
 		this.title = title;
+	}
+	public Long getId() {
+		return id;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public List<BugEntity> getBugs() {
+		return bugs;
 	}
 }

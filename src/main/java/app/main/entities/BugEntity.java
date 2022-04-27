@@ -26,10 +26,8 @@ public class BugEntity {
 	private Date createdAt;
 	@Column(nullable = false)
 	private Severity severity;
-	@Column
-	private String imageUrl;
 	
-	@ManyToOne(fetch = FetchType.EAGER, optional = false)
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	private SoftwareEntity software;
 
 	public BugEntity() {}
@@ -39,29 +37,43 @@ public class BugEntity {
 				String description,
 				Date deadline,
 				Date createdAt,
-				Severity severity,
-				String imageUrl
+				Severity severity
 			) {
 		this.id = id;
 		this.description = description;
 		this.deadline = deadline;
 		this.createdAt = createdAt;
 		this.severity = severity;
-		this.imageUrl = imageUrl;
 	}
 	
 	public BugEntity(
 				String description,
 				Date deadline,
-				Severity severity,
-				String imageUrl
+				Severity severity
 			) {
 		this.description =  description;
 		this.deadline = deadline;
 		this.severity = severity;
-		this.imageUrl = imageUrl;
 	}
 
 	public void setSoftware(SoftwareEntity software) { this.software = software; }
 	public void setSeverity(Severity severity) { this.severity = severity; }
+	public Long getId() {
+		return id;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public Date getDeadline() {
+		return deadline;
+	}
+	public Date getCreatedAt() {
+		return createdAt;
+	}
+	public Severity getSeverity() {
+		return severity;
+	}
+	public SoftwareEntity getSoftware() {
+		return software;
+	}
 }
