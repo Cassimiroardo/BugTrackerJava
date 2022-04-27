@@ -2,6 +2,7 @@ package app.main.controllers;
 
 import app.main.dto.PatchBugDto;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,6 +17,8 @@ import app.main.entities.SoftwareEntity;
 import app.main.enums.Severity;
 import app.main.repositories.BugRepository;
 import app.main.repositories.SoftwareRepository;
+
+import java.util.List;
 
 @RestController
 public class BugTrackerController {
@@ -71,8 +74,36 @@ public class BugTrackerController {
 	}
 
 	@GetMapping(path = "/bug/{bugId}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<BugEntity> readBug() {
-		return null;
+	public ResponseEntity<List<BugEntity>> readBug(
+			@PathVariable(name = "bugId", required = false) @Nullable Long bugId
+	) {
+		System.out.println(bugId);
+
+		if(bugId == null) {
+			List<BugEntity> bugs = this.bugRepository.findAll();
+			return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
+		}
+
+		List<BugEntity> bugs = this.bugRepository.findAllById(bugId);
+		return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
+
+	}
+
+	@GetMapping(path = "/bug/software/{idSoftware}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<List<BugEntity>> readBug(
+			@RequestBody(required = false) @Nullable PatchBugDto patchBugDto,
+			@PathVariable(name = "idSoftware", required = true) @NotNull Long idSoftware
+	) {
+		if(idSoftware == null)
+			return new ResponseEntity(null, HttpStatus.BAD_REQUEST);
+
+		if(patchBugDto.isValid()){
+			List<BugEntity> bugs = this.bugRepository.findByIdSoftwareWhereSeverity(idSoftware, patchBugDto.getSeverity());
+			return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
+		}
+
+		List<BugEntity> bugs = this.bugRepository.findBySoftwareId(idSoftware);
+		return new ResponseEntity<List<BugEntity>>(bugs, null, HttpStatus.OK);
 	}
 
 	@PatchMapping(path = "/bug/{bugId}/severity", produces = MediaType.APPLICATION_JSON_VALUE)
