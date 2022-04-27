@@ -7,7 +7,7 @@ public class PatchBugDto {
         this.severity = severity;
     }
     public boolean isValid() {
-        return this.severity <= 3 && this.severity >= 0;
+        return this.severity >= 1 && this.severity <= 3;
     }
     public int getSeverity() {
         return severity;
